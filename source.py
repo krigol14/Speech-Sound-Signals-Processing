@@ -11,7 +11,7 @@ datasetDirFolder = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven
 datasetDirectory = 'auxiliary/training'
 
 # determine the number of sound samples that will be used for processing
-samples = 2000
+samples = 30
 
 # load the audio data
 def load_data(datasetDirFolder, datasetDirectory, samples):
@@ -60,7 +60,7 @@ def extract_mfcc_features(audio_paths):
         filtered_audio, _ = librosa.effects.trim(preemphasized_audio, top_db=20)
 
         # calculation of MFCC features
-        mfcc = librosa.feature.mfcc(filtered_audio, sr=16000, n_mfcc=13)
+        mfcc = librosa.feature.mfcc(y=filtered_audio, sr=16000, n_mfcc=13)
         mfcc_normalized = (mfcc - np.mean(mfcc)) / np.std(mfcc)
         mfcc_features.append(mfcc_normalized)
 
@@ -85,35 +85,35 @@ for mfcc in mfcc_features:
 X = np.array(X)
 
 # load the recording.wav file and extract the MFCC features
-recording_path = "recording.wav"
+recording_path = "auxiliary/recording.wav"
 audio_signal, _ = librosa.load(recording_path, sr=16000)
 preemphasized_audio = librosa.effects.preemphasis(audio_signal)
 filtered_audio, _ = librosa.effects.trim(preemphasized_audio, top_db=20)
-mfcc = librosa.feature.mfcc(filtered_audio, sr=16000, n_mfcc=13)
+mfcc = librosa.feature.mfcc(y=filtered_audio, sr=16000, n_mfcc=13)
 mfcc_normalized = (mfcc - np.mean(mfcc)) / np.std(mfcc)
-padded_mfcc = np.pad(mfcc_normalized, ((0, 0), (0, max_mfcc_length - mfcc_normalized.shape[1])), mode='constant', constant_values=0)
+padded_mfcc = np.pad(mfcc_normalized, ((0, 0), (0, max(0, max_mfcc_length - mfcc_normalized.shape[1]))), mode='constant', constant_values=0)
 X_recording = np.array([padded_mfcc.T])
 
-# splitting the data into training and testing sets
-# we assume that we already have the arrays X_train, X_test, y_train, y_test from a previous use of the train_test_split
+# # splitting the data into training and testing sets
+# # we assume that we already have the arrays X_train, X_test, y_train, y_test from a previous use of the train_test_split
 
-# creating and training a neural network model
-model = tf.keras.models.Sequential([
-    tf.keras.layers.Flatten(input_shape=(X_train.shape[1], X_train.shape[2])),
-    tf.keras.layers.Dense(128, activation='relu'),
-    tf.keras.layers.Dense(10, activation='softmax')
-])
+# # creating and training a neural network model
+# model = tf.keras.models.Sequential([
+#     tf.keras.layers.Flatten(input_shape=(X_train.shape[1], X_train.shape[2])),
+#     tf.keras.layers.Dense(128, activation='relu'),
+#     tf.keras.layers.Dense(10, activation='softmax')
+# ])
 
-model.compile(optimizer='adam',
-              loss='sparse_categorical_crossentropy',
-              metrics=['accuracy'])
+# model.compile(optimizer='adam',
+#               loss='sparse_categorical_crossentropy',
+#               metrics=['accuracy'])
 
-model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+# model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
 
-# evaluation of the model's accuracy on the test data
-test_loss, test_acc = model.evaluate(X_test, y_test)
-print('Test accuracy:', test_acc)
+# # evaluation of the model's accuracy on the test data
+# test_loss, test_acc = model.evaluate(X_test, y_test)
+# print('Test accuracy:', test_acc)
 
-# prediction of the digit for the recording.wav file
-predicted_label = np.argmax(model.predict(X_recording))
-print('Predicted digit for recording.wav:', predicted_label)
+# # prediction of the digit for the recording.wav file
+# predicted_label = np.argmax(model.predict(X_recording))
+# print('Predicted digit for recording.wav:', predicted_label)
