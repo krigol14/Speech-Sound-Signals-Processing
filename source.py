@@ -5,35 +5,35 @@ import tensorflow as tf
 from tensorflow.keras import layers, models
 import librosa
 
-# Ορίζουμε μια λίστα που περιέχει τα ονόματα-ετικέτες των φακέλων που βρίσκονται στο dataset
-# και χρησιμοποιούνται για να συλλέξουμε όλα τα δεδομένα.
+# define a list containing the names-labels of the folders located in the dataset
+# and are used to collect all the data
 datasetDirFolder = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
 
-# Ορίζουμε το γενικό directory όπου βρίσκονται όλα τα δεδομένα μας.
+# define the general directory where all our data is located
 datasetDirectory = 'Data/SpeechCommands/speech_commands_v0.02'
 
-# Καθορίζουμε τον αριθμό των δειγμάτων ήχου που θα χρησιμοποιήσουμε για επεξεργασία.
+# determine the number of sound samples that will be used for processing
 samples = 2000
 
-# Φορτώνουμε τα δεδομένα ήχου.
+# load the audio data
 def load_data(datasetDirFolder, datasetDirectory, samples):
     audio_fullpaths = []
     audio_digit_labels = []
 
-    # Επανάληψη μέσω των φακέλων στο dataset.
+    # loop through the folders in the dataset
     for digitFolder in datasetDirFolder:
-        # Δημιουργία του απόλυτου μονοπατιού για κάθε φάκελο (ψηφίου).
+        # create the absolute path for each folder (digit)
         digit_fullpath = os.path.join(datasetDirectory, digitFolder)
-        # Λίστα με τα αρχεία ήχου σε κάθε φάκελο (ψηφίου).
+        # list of audio files in each folder (digit)
         digit_file_names = os.listdir(digit_fullpath)
-        # Πλήρες μονοπάτι για κάθε αρχείο ήχου σε αυτό το φάκελο.
+        # full path for each audio file in this folder
         files_fullpath = [os.path.join(digit_fullpath, file) for file in digit_file_names]
 
         audio_fullpaths.extend(files_fullpath)
-        # Επισημείωση των αρχείων ήχου με το αντίστοιχο ψηφίο (ετικέτα).
+        # labeling the audio files with the corresponding digit (label)
         audio_digit_labels.extend([digitFolder] * len(files_fullpath))
 
-    # Τυχαία επιλογή δειγμάτων για επεξεργασία.
+    # random selection of samples for processing
     random.seed(42)
     random_selected_samples = random.sample(range(len(audio_fullpaths)), samples)
 
@@ -48,7 +48,7 @@ def load_data(datasetDirFolder, datasetDirectory, samples):
 
     return selected_audio_fullpaths, selected_audio_digit_labels
 
-# Εξαγωγή των χαρακτηριστικών MFCC από τα αρχεία ήχου.
+# extraction of MFCC features from the audio files
 def extract_mfcc_features(audio_paths):
     mfcc_features = []
     max_mfcc_length = 0
@@ -56,29 +56,29 @@ def extract_mfcc_features(audio_paths):
     for i, path in enumerate(audio_paths):
         print(f"Processing audio {i + 1}/{len(audio_paths)}")
 
-        # Φόρτωση του ήχου και προεπεξεργασία.
+        # load the audio and preprocessing
         audio_signal, _ = librosa.load(path, sr=16000)
         preemphasized_audio = librosa.effects.preemphasis(audio_signal)
         filtered_audio, _ = librosa.effects.trim(preemphasized_audio, top_db=20)
 
-        # Υπολογισμός των χαρακτηριστικών MFCC.
+        # calculation of MFCC features
         mfcc = librosa.feature.mfcc(filtered_audio, sr=16000, n_mfcc=13)
         mfcc_normalized = (mfcc - np.mean(mfcc)) / np.std(mfcc)
         mfcc_features.append(mfcc_normalized)
 
-        # Εύρεση του μέγιστου μήκους των MFCC χαρακτηριστικών.
+        # finding the maximum length of MFCC features
         current_mfcc_length = mfcc_normalized.shape[1]
         if current_mfcc_length > max_mfcc_length:
             max_mfcc_length = current_mfcc_length
 
-    print("Feature extraction completed.")
+    print("Feature extraction completed")
     return mfcc_features, max_mfcc_length
 
-# Φόρτωση και επεξεργασία των δεδομένων ήχου.
+# load and process the audio data
 selected_audio_fullpaths, selected_audio_digit_labels = load_data(datasetDirFolder, datasetDirectory, samples)
 mfcc_features, max_mfcc_length = extract_mfcc_features(selected_audio_fullpaths)
 
-# Προσαρμογή των ακολουθιών MFCC χαρακτηριστικών.
+# adjusting the MFCC feature sequences
 X = []
 for mfcc in mfcc_features:
     remained_length = max_mfcc_length - mfcc.shape[1]
@@ -86,7 +86,7 @@ for mfcc in mfcc_features:
     X.append(padded_mfcc.T)
 X = np.array(X)
 
-# Φόρτωση του αρχείου recording.wav και εξαγωγή των χαρακτηριστικών MFCC.
+# load the recording.wav file and extract the MFCC features
 recording_path = "recording.wav"
 audio_signal, _ = librosa.load(recording_path, sr=16000)
 preemphasized_audio = librosa.effects.preemphasis(audio_signal)
@@ -96,10 +96,10 @@ mfcc_normalized = (mfcc - np.mean(mfcc)) / np.std(mfcc)
 padded_mfcc = np.pad(mfcc_normalized, ((0, 0), (0, max_mfcc_length - mfcc_normalized.shape[1])), mode='constant', constant_values=0)
 X_recording = np.array([padded_mfcc.T])
 
-# Διαχωρισμός των δεδομένων σε σύνολα εκπαίδευσης και ελέγχου.
-# Υποθέτουμε ότι έχουμε ήδη τους πίνακες X_train, X_test, y_train, y_test από προηγούμενη χρήση της train_test_split.
+# splitting the data into training and testing sets
+# we assume that we already have the arrays X_train, X_test, y_train, y_test from a previous use of the train_test_split
 
-# Δημιουργία και εκπαίδευση ενός μοντέλου νευρωνικού δικτύου.
+# creating and training a neural network model
 model = models.Sequential([
     layers.Flatten(input_shape=(X_train.shape[1], X_train.shape[2])),
     layers.Dense(128, activation='relu'),
@@ -112,10 +112,10 @@ model.compile(optimizer='adam',
 
 model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
 
-# Αξιολόγηση της ακρίβειας του μοντέλου στα δεδομένα ελέγχου.
+# evaluation of the model's accuracy on the test data
 test_loss, test_acc = model.evaluate(X_test, y_test)
 print('Test accuracy:', test_acc)
 
-# Πρόβλεψη του ψηφίου για το αρχείο recording.wav
+# prediction of the digit for the recording.wav file
 predicted_label = np.argmax(model.predict(X_recording))
 print('Predicted digit for recording.wav:', predicted_label)
