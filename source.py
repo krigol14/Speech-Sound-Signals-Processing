@@ -4,12 +4,11 @@ import numpy as np
 import tensorflow as tf
 import librosa
 
-# define a list containing the names-labels of the folders located in the dataset
-# and are used to collect all the data
+# define a list containing the names of the folders that are used to collect all the data
 datasetDirFolder = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
 
 # define the general directory where all our data is located
-datasetDirectory = 'Data/SpeechCommands/speech_commands_v0.02'
+datasetDirectory = 'auxiliary/training'
 
 # determine the number of sound samples that will be used for processing
 samples = 2000
