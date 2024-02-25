@@ -2,7 +2,6 @@ import os
 import random
 import numpy as np
 import tensorflow as tf
-from tensorflow.keras import layers, models
 import librosa
 
 # define a list containing the names-labels of the folders located in the dataset
@@ -100,10 +99,10 @@ X_recording = np.array([padded_mfcc.T])
 # we assume that we already have the arrays X_train, X_test, y_train, y_test from a previous use of the train_test_split
 
 # creating and training a neural network model
-model = models.Sequential([
-    layers.Flatten(input_shape=(X_train.shape[1], X_train.shape[2])),
-    layers.Dense(128, activation='relu'),
-    layers.Dense(10, activation='softmax')
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Flatten(input_shape=(X_train.shape[1], X_train.shape[2])),
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dense(10, activation='softmax')
 ])
 
 model.compile(optimizer='adam',
