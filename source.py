@@ -3,6 +3,8 @@ import random
 import numpy as np
 import tensorflow as tf
 import librosa
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
 
 # define a list containing the names of the folders that are used to collect all the data
 datasetDirFolder = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine']
@@ -91,29 +93,46 @@ preemphasized_audio = librosa.effects.preemphasis(audio_signal)
 filtered_audio, _ = librosa.effects.trim(preemphasized_audio, top_db=20)
 mfcc = librosa.feature.mfcc(y=filtered_audio, sr=16000, n_mfcc=13)
 mfcc_normalized = (mfcc - np.mean(mfcc)) / np.std(mfcc)
-padded_mfcc = np.pad(mfcc_normalized, ((0, 0), (0, max(0, max_mfcc_length - mfcc_normalized.shape[1]))), mode='constant', constant_values=0)
+
+# correct padding for X_recording to match the model's expected input shape
+expected_length = 221  # this should match X_train.shape[1]
+
+# pad or truncate the mfcc_normalized array to have the expected_length
+if mfcc_normalized.shape[1] < expected_length:
+    # pad if the sequence is shorter
+    padding_length = expected_length - mfcc_normalized.shape[1]
+    padded_mfcc = np.pad(mfcc_normalized, ((0, 0), (0, padding_length)), mode='constant', constant_values=0)
+elif mfcc_normalized.shape[1] > expected_length:
+    # truncate if the sequence is longer
+    padded_mfcc = mfcc_normalized[:, :expected_length]
+else:
+    # if it already matches the expected length, no need to pad or truncate
+    padded_mfcc = mfcc_normalized
+
 X_recording = np.array([padded_mfcc.T])
 
-# # splitting the data into training and testing sets
-# # we assume that we already have the arrays X_train, X_test, y_train, y_test from a previous use of the train_test_split
+# splitting the data into training and testing sets
+label_encoder = LabelEncoder()
+y = label_encoder.fit_transform(selected_audio_digit_labels)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# # creating and training a neural network model
-# model = tf.keras.models.Sequential([
-#     tf.keras.layers.Flatten(input_shape=(X_train.shape[1], X_train.shape[2])),
-#     tf.keras.layers.Dense(128, activation='relu'),
-#     tf.keras.layers.Dense(10, activation='softmax')
-# ])
+# creating and training a neural network model
+model = tf.keras.models.Sequential([
+    tf.keras.layers.Flatten(input_shape=(X_train.shape[1], X_train.shape[2])),
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dense(10, activation='softmax')
+])
 
-# model.compile(optimizer='adam',
-#               loss='sparse_categorical_crossentropy',
-#               metrics=['accuracy'])
+model.compile(optimizer='adam',
+              loss='sparse_categorical_crossentropy',
+              metrics=['accuracy'])
 
-# model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
+model.fit(X_train, y_train, epochs=10, batch_size=32, validation_data=(X_test, y_test))
 
-# # evaluation of the model's accuracy on the test data
-# test_loss, test_acc = model.evaluate(X_test, y_test)
-# print('Test accuracy:', test_acc)
+# evaluation of the model's accuracy on the test data
+test_loss, test_acc = model.evaluate(X_test, y_test)
+print('Test accuracy:', test_acc)
 
-# # prediction of the digit for the recording.wav file
-# predicted_label = np.argmax(model.predict(X_recording))
-# print('Predicted digit for recording.wav:', predicted_label)
+# prediction of the digit for the recording.wav file
+predicted_label = np.argmax(model.predict(X_recording))
+print('Predicted digit for recording.wav:', predicted_label)
